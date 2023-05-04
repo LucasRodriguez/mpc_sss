@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package mpc;
+
+service MPC {
+  rpc ComputeSum (ComputeSumRequest) returns (ComputeSumResponse) {}
+}
+
+message ComputeSumRequest {
+  repeated bytes shares = 1;
+}
+
+message ComputeSumResponse {
+  bytes result = 1;
+}
