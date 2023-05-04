@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package mpc;
 
+option go_package = "github.com/LucasRodriguez/mpc_sss/proto;proto";
+
 service MPC {
   rpc ComputeSum (ComputeSumRequest) returns (ComputeSumResponse) {}
 }

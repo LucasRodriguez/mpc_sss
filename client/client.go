@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
-	"errors"
 	"time"
+	"log"
 
 	"google.golang.org/grpc"
 
@@ -13,6 +13,7 @@ import (
 func SendSharesToServer(address string, shares [][]byte) ([]byte, error) {
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
+		log.Printf("Failed to dial gRPC server: %v", err)
 		return nil, err
 	}
 	defer conn.Close()
@@ -24,7 +25,8 @@ func SendSharesToServer(address string, shares [][]byte) ([]byte, error) {
 
 	resp, err := c.ComputeSum(ctx, &pb.ComputeSumRequest{Shares: shares})
 	if err != nil {
-		return nil, errors.New("failed to send shares to server")
+		log.Printf("Failed to send shares to server: %v", err)
+		return nil, err
 	}
 
 	return resp.GetResult(), nil

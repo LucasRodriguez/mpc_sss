@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/LucasRodriguez/mpc_sss/"
+
+	"github.com/LucasRodriguez/mpc_sss/mpc"
 )
 
 func main() {
@@ -11,7 +12,7 @@ func main() {
 	n := 5
 	k := 3
 
-	results, err := mpc.RunMPCExample(address, secrets, n, k)
+	results,_, err := mpc.RunMPCExample(address, secrets, n, k)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return

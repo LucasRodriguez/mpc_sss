@@ -1,16 +1,18 @@
-package mpc_sss
+package mpc
 
 import (
-	"fmt"
 	"math/big"
-
-	"github.com/LucasRodriguez/mpc_sss/client"
+	"time"
+	"log"
 	"github.com/LucasRodriguez/mpc_sss/server"
+	"github.com/LucasRodriguez/mpc_sss/client"
+	"github.com/hashicorp/vault/shamir"
 )
 
-func RunMPCExample(address string, secrets []int, n int, k int) ([]int, error) {
+func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]byte, error){
 	go func() {
 		if err := server.RunServer(address); err != nil {
+			log.Printf("Error running server: %v", err)
 			panic(err)
 		}
 	}()
@@ -20,9 +22,11 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, error) {
 
 	allShares := make([][][]byte, len(secrets))
 	for i, secret := range secrets {
-		shares, err := splitSecret(secret, n, k)
+		secretBigInt := big.NewInt(int64(secret))
+		shares, err := shamir.Split(secretBigInt.Bytes(), n, k)
 		if err != nil {
-			return nil, fmt.Errorf("error splitting secret %d: %w", i, err)
+			log.Printf("Error splitting secret %d: %v", i, err)
+        	return nil, nil, err
 		}
 		allShares[i] = shares
 	}
@@ -36,12 +40,13 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, error) {
 
 		resultBytes, err := client.SendSharesToServer(address, partyShares)
 		if err != nil {
-			return nil, fmt.Errorf("error sending shares to server: %w", err)
+			log.Printf("Error sending shares to server: %v", err)
+        	return nil, nil, err
 		}
 
 		result := new(big.Int).SetBytes(resultBytes)
 		results[i] = int(result.Int64())
 	}
 
-	return results, nil
+    return results, allShares, nil
 }
