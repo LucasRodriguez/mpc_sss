@@ -1,67 +1,33 @@
 package main
 
 import (
-	"encoding/binary"
-	"fmt"
 	"testing"
-
-	"github.com/hashicorp/vault/shamir"
+	"github.com/LucasRodriguez/mpc_sss/mpc"
 )
 
-func TestMPCExample(t *testing.T) {
+func TestRunMPCExample(t *testing.T) {
 	secrets := []int{1, 22, 983}
 	n := 8
 	k := 6
 
-	allShares := make([][][]byte, len(secrets))
-
-	for i, secret := range secrets {
-		secretBytes := intToBytes(secret)
-		shares, err := shamir.Split(secretBytes, n, k)
-		if err != nil {
-			t.Fatalf("Error splitting secret %d: %v", i, err)
-		}
-		allShares[i] = shares
+	results, allShares, err := mpc.RunMPCExample("localhost:50051", secrets, n, k)
+	if err != nil {
+		t.Fatalf("Error running MPC example: %v", err)
 	}
 
-	for i := 0; i < len(secrets); i++ {
-		secretShares := allShares[i]
+	// Validate results
+	if len(results) != n {
+		t.Errorf("Expected %d results, but got %d", n, len(results))
+	}
 
-		fmt.Printf("\nSecret %d\n", i)
-		fmt.Printf("Secret shares:\n")
-		for _, share := range secretShares {
-			fmt.Printf("%0x\n", share)
-		}
+	// Validate allShares
+	if len(allShares) != len(secrets) {
+		t.Errorf("Expected %d sets of shares, but got %d", len(secrets), len(allShares))
+	}
 
-		secretBytes, err := shamir.Combine(secretShares)
-		if err != nil {
-			t.Fatalf("Error combining shares for secret %d: %v", i, err)
-		}
-
-		fmt.Printf("Combined secret bytes: %0x\n", secretBytes)
-
-		secret := bytesToInt(secretBytes)
-		fmt.Printf("Reconstructed secret %d: %d\n", i, secret)
-
-		if secret != secrets[i] {
-			t.Errorf(
-				"Reconstructed secret %d does not match original secret. Expected %d, got %d",
-				i,
-				secrets[i],
-				secret,
-			)
-		} else {
-			fmt.Printf("Reconstructed secret %d matches the original secret\n", i)
+	for i, shares := range allShares {
+		if len(shares) != n {
+			t.Errorf("Expected %d shares for secret %d, but got %d", n, i, len(shares))
 		}
 	}
-}
-
-func bytesToInt(b []byte) int {
-	return int(binary.BigEndian.Uint32(append(make([]byte, 4-len(b)), b...)))
-}
-
-func intToBytes(n int) []byte {
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, uint32(n))
-	return buf
 }
