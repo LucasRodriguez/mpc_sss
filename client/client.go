@@ -3,31 +3,31 @@ package client
 import (
 	"context"
 	"time"
-	"log"
+	"fmt"
 
 	"google.golang.org/grpc"
 
 	pb "github.com/LucasRodriguez/mpc_sss/proto"
 )
 
-func SendSharesToServer(address string, shares [][]byte) ([]byte, error) {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+func SendSharesToServer(serverAddress string, shares [][]byte, timeout time.Duration) ([]byte, error) {
+	// Set a custom dial timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, serverAddress, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		log.Printf("Failed to dial gRPC server: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to server: %v", err)
 	}
 	defer conn.Close()
 
-	c := pb.NewMPCClient(conn)
+	client := pb.NewMPCClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	resp, err := c.ComputeSum(ctx, &pb.ComputeSumRequest{Shares: shares})
+	req := &pb.ComputeSumRequest{Shares: shares}
+	resp, err := client.ComputeSum(ctx, req)
 	if err != nil {
-		log.Printf("Failed to send shares to server: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("compute sum failed: %v", err)
 	}
 
-	return resp.GetResult(), nil
+	return resp.Result, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 	"github.com/LucasRodriguez/mpc_sss/mpc"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRunMPCExample(t *testing.T) {
@@ -11,23 +12,20 @@ func TestRunMPCExample(t *testing.T) {
 	k := 6
 
 	results, allShares, err := mpc.RunMPCExample("localhost:50051", secrets, n, k)
-	if err != nil {
-		t.Fatalf("Error running MPC example: %v", err)
-	}
+
+	// Check for errors
+	assert.NoError(t, err, "Error running MPC example")
 
 	// Validate results
-	if len(results) != n {
-		t.Errorf("Expected %d results, but got %d", n, len(results))
-	}
+	expectedResultsLen := n
+	assert.Equal(t, expectedResultsLen, len(results), "Expected %d results, but got %d", n, len(results))
 
 	// Validate allShares
-	if len(allShares) != len(secrets) {
-		t.Errorf("Expected %d sets of shares, but got %d", len(secrets), len(allShares))
-	}
+	expectedSharesLen := len(secrets)
+	assert.Equal(t, expectedSharesLen, len(allShares), "Expected %d sets of shares, but got %d", len(secrets), len(allShares))
 
 	for i, shares := range allShares {
-		if len(shares) != n {
-			t.Errorf("Expected %d shares for secret %d, but got %d", n, i, len(shares))
-		}
+		expectedSharesPerSecret := n
+		assert.Equal(t, expectedSharesPerSecret, len(shares), "Expected %d shares for secret %d, but got %d", n, i, len(shares))
 	}
 }

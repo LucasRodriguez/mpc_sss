@@ -2,6 +2,7 @@ package mpc
 
 import (
 	"math/big"
+	"encoding/binary"
 	"time"
 	"log"
 	"github.com/LucasRodriguez/mpc_sss/server"
@@ -13,12 +14,11 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]by
 	go func() {
 		if err := server.RunServer(address); err != nil {
 			log.Printf("Error running server: %v", err)
-			panic(err)
 		}
 	}()
 
 	// Give the server some time to start
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	allShares := make([][][]byte, len(secrets))
     for i, secret := range secrets {
@@ -38,7 +38,7 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]by
             partyShares[j] = allShares[j][i]
         }
 
-        resultBytes, err := client.SendSharesToServer(address, partyShares)
+        resultBytes, err := client.SendSharesToServer(address, partyShares, time.Second)
         if err != nil {
             log.Printf("Error sending shares to server: %v", err)
             return nil, nil, err
@@ -49,4 +49,14 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]by
     }
 
     return results, allShares, nil
+}
+
+func BytesToInt(b []byte) int {
+	return int(binary.BigEndian.Uint32(append(make([]byte, 4-len(b)), b...)))
+}
+
+func IntToBytes(n int) []byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, uint32(n))
+	return buf
 }
