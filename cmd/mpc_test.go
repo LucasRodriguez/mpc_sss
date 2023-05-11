@@ -5,33 +5,27 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/LucasRodriguez/mpc_sss/mpc"
 	"github.com/hashicorp/vault/shamir"
 )
 
 func TestMPCExample(t *testing.T) {
-	address := "localhost:8080"
-	secrets := []int{42, 123, 987}
-	n := 7
-	k := 3
+	secrets := []int{1, 22, 983}
+	n := 8
+	k := 6
 
-	_, allShares, err := mpc.RunMPCExample(address, secrets, n, k)
-	if err != nil {
-		t.Fatalf("Error running MPC example: %v", err)
-	}
+	allShares := make([][][]byte, len(secrets))
 
-	fmt.Printf("Iteration index: 0\n")
-	fmt.Printf("Shares to use for reconstruction:\n")
-	for i := 0; i < k; i++ {
-		share := allShares[0][i]
-		fmt.Printf("%0x\n", share)
+	for i, secret := range secrets {
+		secretBytes := intToBytes(secret)
+		shares, err := shamir.Split(secretBytes, n, k)
+		if err != nil {
+			t.Fatalf("Error splitting secret %d: %v", i, err)
+		}
+		allShares[i] = shares
 	}
 
 	for i := 0; i < len(secrets); i++ {
-		secretShares := make([][]byte, n)
-		for j := 0; j < n; j++ {
-			secretShares[j] = allShares[i][j]
-		}
+		secretShares := allShares[i]
 
 		fmt.Printf("\nSecret %d\n", i)
 		fmt.Printf("Secret shares:\n")
@@ -63,28 +57,11 @@ func TestMPCExample(t *testing.T) {
 }
 
 func bytesToInt(b []byte) int {
-	return int(binary.BigEndian.Uint32(append(make([]byte, 4-len(b[:len(b)-1])), b...)))
+	return int(binary.BigEndian.Uint32(append(make([]byte, 4-len(b)), b...)))
 }
 
 func intToBytes(n int) []byte {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, uint32(n))
 	return buf
-}
-
-func padShares(shares [][]byte) [][]byte {
-	maxLen := 0
-	for _, share := range shares {
-		if len(share) > maxLen {
-			maxLen = len(share)
-		}
-	}
-
-	paddedShares := make([][]byte, len(shares))
-	for i, share := range shares {
-		paddedShares[i] = make([]byte, maxLen)
-		copy(paddedShares[i][maxLen-len(share):], share)
-	}
-
-	return paddedShares
 }
