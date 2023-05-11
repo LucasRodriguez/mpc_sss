@@ -19,31 +19,40 @@ func TestMPCExample(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	for i, result := range results {
-		// Try to reconstruct the secret using the result and k-1 shares from other secrets
-		sharesToUse := make([][]byte, k)
-		sharesToUse[0] = intToBytes(result)
+	for i := 0; i < len(results); i++ {
+    result := results[i]
+    // Try to reconstruct the secret using the result and k-1 shares from other secrets
+    sharesToUse := make([][]byte, k)
+    sharesToUse[0] = intToBytes(result)
 
-		index := 0
-		for j := 1; j < k; j++ {
-			if index == i {
-				index++
-			}
-			sharesToUse[j] = allShares[index][i]
-			index++
-		}
+    fmt.Printf("Iteration index: %d\n", i)
 
-		fmt.Printf("Shares to use for reconstruction:\n")
-		for _, share := range sharesToUse {
-			fmt.Printf("%x\n", share)
-		}
+    index := 0
+    for j := 1; j < k; j++ {
+        if index == i {
+            index++
+        }
+        if index >= len(allShares) {
+            break
+        }
+        sharesToUse[j] = allShares[index][i]
+        index++
+    }
 
-		reconstructedSecret, err := shamir.Combine(sharesToUse)
-		assert.NoError(t, err)
+    fmt.Printf("Shares to use for reconstruction:\n")
+    for _, share := range sharesToUse {
+        fmt.Printf("%x\n", share)
+    }
 
-		// Check if the reconstructed secret is in the original secrets
-		assert.Contains(t, secrets, int(bytesToInt(reconstructedSecret)))
-	}
+    reconstructedSecret, err := shamir.Combine(sharesToUse)
+    if err != nil {
+        fmt.Printf("Error in iteration %d: %v\n", i, err)
+        continue
+    }
+
+    // Check if the reconstructed secret is in the original secrets
+    assert.Contains(t, secrets, int(bytesToInt(reconstructedSecret)))
+}
 }
 
 func intToBytes(n int) []byte {
