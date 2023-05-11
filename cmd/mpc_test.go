@@ -1,68 +1,75 @@
 package main
 
 import (
-	"testing"
-	"encoding/binary"	
+	"encoding/binary"
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"testing"
+
 	"github.com/LucasRodriguez/mpc_sss/mpc"
 	"github.com/hashicorp/vault/shamir"
 )
 
 func TestMPCExample(t *testing.T) {
-	address := "localhost:50051"
-	secrets := []int{123, 456, 789}
-	n := 5
+	address := "localhost:8080"
+	secrets := []int{42, 123, 987}
+	n := 7
 	k := 3
 
-	results, allShares, err := mpc.RunMPCExample(address, secrets, n, k)
+	_, allShares, err := mpc.RunMPCExample(address, secrets, n, k)
+	if err != nil {
+		t.Fatalf("Error running MPC example: %v", err)
+	}
 
-	assert.NoError(t, err)
+	fmt.Printf("Iteration index: 0\n")
+	fmt.Printf("Shares to use for reconstruction:\n")
+	for i := 0; i < k; i++ {
+		share := allShares[0][i]
+		fmt.Printf("%0x\n", share)
+	}
 
-	for i := 0; i < len(results); i++ {
-    result := results[i]
-    // Try to reconstruct the secret using the result and k-1 shares from other secrets
-    sharesToUse := make([][]byte, k)
-    sharesToUse[0] = intToBytes(result)
+	for i := 0; i < len(secrets); i++ {
+		secretShares := make([][]byte, n)
+		for j := 0; j < n; j++ {
+			secretShares[j] = allShares[i][j]
+		}
 
-    fmt.Printf("Iteration index: %d\n", i)
+		fmt.Printf("\nSecret %d\n", i)
+		fmt.Printf("Secret shares:\n")
+		for _, share := range secretShares {
+			fmt.Printf("%0x\n", share)
+		}
 
-    index := 0
-    for j := 1; j < k; j++ {
-        if index == i {
-            index++
-        }
-        if index >= len(allShares) {
-            break
-        }
-        sharesToUse[j] = allShares[index][i]
-        index++
-    }
+		secretBytes, err := shamir.Combine(secretShares)
+		if err != nil {
+			t.Fatalf("Error combining shares for secret %d: %v", i, err)
+		}
 
-    fmt.Printf("Shares to use for reconstruction:\n")
-    for _, share := range sharesToUse {
-        fmt.Printf("%x\n", share)
-    }
+		fmt.Printf("Combined secret bytes: %0x\n", secretBytes)
 
-    reconstructedSecret, err := shamir.Combine(sharesToUse)
-    if err != nil {
-        fmt.Printf("Error in iteration %d: %v\n", i, err)
-        continue
-    }
+		secret := bytesToInt(secretBytes)
+		fmt.Printf("Reconstructed secret %d: %d\n", i, secret)
 
-    // Check if the reconstructed secret is in the original secrets
-    assert.Contains(t, secrets, int(bytesToInt(reconstructedSecret)))
+		if secret != secrets[i] {
+			t.Errorf(
+				"Reconstructed secret %d does not match original secret. Expected %d, got %d",
+				i,
+				secrets[i],
+				secret,
+			)
+		} else {
+			fmt.Printf("Reconstructed secret %d matches the original secret\n", i)
+		}
+	}
 }
+
+func bytesToInt(b []byte) int {
+	return int(binary.BigEndian.Uint32(append(make([]byte, 4-len(b[:len(b)-1])), b...)))
 }
 
 func intToBytes(n int) []byte {
 	buf := make([]byte, 4)
 	binary.BigEndian.PutUint32(buf, uint32(n))
 	return buf
-}
-
-func bytesToInt(b []byte) int {
-	return int(binary.BigEndian.Uint32(b))
 }
 
 func padShares(shares [][]byte) [][]byte {
