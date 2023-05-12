@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"encoding/binary"
 	"time"
+    "fmt"
 	"log"
 	"github.com/LucasRodriguez/mpc_sss/server"
 	"github.com/LucasRodriguez/mpc_sss/client"
@@ -21,6 +22,8 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]by
 	time.Sleep(3 * time.Second)
 
 	allShares := make([][][]byte, len(secrets))
+    fmt.Printf("All shares: %+v\n", allShares)
+
     for i, secret := range secrets {
         secretBytes := append(big.NewInt(int64(secret)).Bytes(), byte(i))
         shares, err := shamir.Split(secretBytes, n, k)
@@ -34,6 +37,7 @@ func RunMPCExample(address string, secrets []int, n int, k int) ([]int, [][][]by
     results := make([]int, n)
     for i := 0; i < n; i++ {
         partyShares := make([][]byte, len(secrets))
+        fmt.Printf("Party %d shares: %+v\n", i, partyShares)
         for j := 0; j < len(secrets); j++ {
             partyShares[j] = allShares[j][i]
         }
